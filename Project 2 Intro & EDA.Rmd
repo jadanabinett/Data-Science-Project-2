@@ -1,0 +1,162 @@
+---
+title: "Project 2"
+author: "Jada Nabinett"
+date: "12/1/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+```
+## Chapter 1: Introduction
+
+Cardiovascular diseases are conditions that affect the structures or function of your heart. Cardiovascular diseases can refer to a number of conditions such as coronary heart disease, cerebrovascular disease, and peripheral arterial disease. According to the World Health Organization, cardiovascular diseases are the number one cause of death globally: more people die annually from cardiovascular diseases than from any other cause. An estimated 17.9 million people died from cardiovascular diseases in 2016, representing 31% of all global deaths. Of these deaths, 85% are due to heart attack and stroke. Heart attacks and strokes are usually acute events and are mainly caused by a blockage that prevents blood from flowing to the heart or brain. The most common reason for this is a build-up of fatty deposits on the inner walls of the blood vessels that supply the heart or brain.(source)[https://www.who.int] 
+
+The Centers for Disease Control and Prevention state high blood pressure, high cholesterol, and smoking are key risk factors for heart disease. About half of Americans (47%) have at least one of these three risk factors. Several other medical conditions and lifestyle choices can also put people at a higher risk for heart disease, including poor diet, physical inactivity, and excessive alcohol use.(source)[https://www.cdc.gov/heartdisease/facts.htm]
+
+## Chapter 2: Description of Dataset
+
+For our second project, we’ve chosen a dataset that contains 70,000 records of patients data. We downloaded this dataset from (source)[https://www.kaggle.com/sulianova/cardiovascular-disease-dataset]. Following is a list of the variables contained in our  dataset:
+*  Age 
+
+*  Height 
+
+*  Weight 
+
+*  Gender 
+
+*  Systolic blood pressure 
+
+*  Diastolic blood pressure 
+
+*  Cholesterol | 1: normal, 2: above normal, 3: well above normal 
+
+*  Glucose | 1: normal, 2: above normal, 3: well above normal |
+
+*  Smoking 
+
+*  Alcohol intake 
+
+*  Physical activity 
+
+*  Presence or absence of cardiovascular disease 
+
+Reading in the data and taking a look at the structure:
+
+```{r, echo=F}
+cardio = read.csv('cardio.csv')
+str(cardio)
+summary(cardio)
+```
+Cleaning the data:
+```{r,echo=F}
+#Remove id column
+cardio_clean = cardio[,-1]
+#Remove negative values from ap_hi, ap_lo, and subset data with ap_hi and ap_lo less than 500.
+cardio_clean = subset(cardio, ap_hi > 0 & ap_hi < 500 & ap_lo > 0 & ap_lo < 500)
+
+#Convert age (days) into age(years)
+cardio_clean$age = round(cardio_clean$age / 365)
+head(cardio_clean)
+
+#Convert some variables into factors
+cardio_clean$gender = as.factor(cardio_clean$gender)
+cardio_clean$cholesterol = as.factor(cardio_clean$cholesterol)
+cardio_clean$gluc = as.factor(cardio_clean$gluc)
+cardio_clean$smoke = as.factor(cardio_clean$smoke)
+cardio_clean$alco = as.factor(cardio_clean$alco)
+cardio_clean$active = as.factor(cardio_clean$active)
+cardio_clean$cardio = as.factor(cardio_clean$cardio)
+```
+Aftering cleaning the dataset we now have `r nrow(cardio_clean)` observations to work with.
+
+## 3. Exploratory Data Analysis
+
+```{r}
+library(plotly)
+library(dplyr)
+
+
+p <- plot_ly() %>%
+  add_pie(data = count(cardio_clean, cholesterol), title = "Cholesterol", labels = ~cholesterol, values = ~n,
+          name = "Cholesterol", domain = list(row = 0, column = 0)) %>% 
+  add_pie(data = count(cardio_clean, gluc), title = "Glucose", labels = ~gluc, values = ~n,
+          name = "Glucose", domain = list(row = 0, column = 1)) %>% 
+  add_pie(data = count(cardio_clean, smoke), title = "Smoker", labels = ~smoke, values = ~n,
+          name = "Smoker", domain = list(row = 1, column = 0)) %>%
+  add_pie(data = count(cardio_clean, alco), title = "Alcohol Intake", labels = ~alco, values = ~n,
+          name = "Alcohol Intake", domain = list(row = 1, column = 1)) %>%
+  add_pie(data = count(cardio_clean, active), title = "Physically Active", labels = ~active, values = ~n,
+          name = "Physically Active", domain = list(row = 2, column = 0)) %>%
+  add_pie(data = count(cardio_clean, cardio), title = "Presence or Absence of Cardiovascular Disease", labels = ~cardio, values = ~n,
+          name = "Presence or Absence of Cardiovascular Disease ", domain = list(row = 2, column = 1)) %>%
+  layout(title = "Analyzing the Profile of Patients", showlegend = F,
+         grid=list(rows=3, columns=3),
+         xaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE),
+         yaxis = list(showgrid = FALSE, zeroline = FALSE, showticklabels = FALSE))
+
+```
+
+```{r}
+p
+```
+```{r}
+cardio_present <- cardio_clean %>% filter(cardio==1)
+summary(cardio_present)
+
+cardio_absent <- cardio_clean %>% filter(cardio==0)
+summary(cardio_absent)
+
+gend1<- cardio_clean %>% filter(gender==1)
+mean(gend1$height)
+
+gend2<- cardio_clean %>% filter(gender==2)
+mean(gend2$height)
+```
+Lets take a look at the patients in the dataset who have cardiovascular diseases. There are `r nrow(cardio_present)` patients who have cardiovascular diseases.
+```{r}
+smoker<-ggplot(cardio_clean, aes(x=smoke, fill=cardio)) +
+  geom_bar(position="fill", stat="count") + theme_minimal() + ggtitle("Non-smokers vs Smokers") +
+  ylab("Percentage of Patients") + xlab("") +  theme(plot.title = element_text(hjust = 0.5)) +  scale_x_discrete(labels=c("0" = "Non-smokers", "1" = "Smokers")) + scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present"))
+smoker
+
+drinker<-ggplot(cardio_clean, aes(x=alco, fill=cardio)) +
+  geom_bar(position="fill",stat="count") + theme_minimal()+ ggtitle("Non-drinkers vs Drinkers") +
+  ylab("Percentage of Patients") + xlab("")  + theme(plot.title = element_text(hjust = 0.5)) + scale_x_discrete(labels=c("0" = "Non-drinkers", "1" = "Drinkers")) + scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present"))
+drinker
+
+active<-ggplot(cardio_clean, aes(x=active, fill=cardio)) +
+  geom_bar(position="fill",stat="count") + theme_minimal() + ggtitle("Non-active vs Active") + ylab("Percentage of Patients") + xlab("") + theme(plot.title = element_text(hjust = 0.5)) + scale_x_discrete(labels=c("0" = "Non-active", "1" = "Active")) + scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present"))
+active
+
+gend<-ggplot(cardio_clean, aes(x=gender, fill=cardio)) +
+  geom_bar(position="fill", stat="count") + theme_minimal() + ggtitle("Gender of Patients") + ylab("Percentage of Patients") + xlab("")  + theme(plot.title = element_text(hjust = 0.5)) + scale_x_discrete(labels=c("2" = "Male", "1" = "Female")) + scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present"))
+gend
+
+gluclose<-ggplot(cardio_clean, aes(x=gluc, fill=cardio)) +
+  geom_bar(stat="count", position = 'dodge') + theme_minimal() + ggtitle("Gluclose Levels of Patients") + ylab("Number of Patients") + xlab("Gluclose Levels")  + theme(plot.title = element_text(hjust = 0.5)) +  scale_x_discrete(labels=c("1" = "Normal", "2" = "Above Normal", "3" = "Well Above Normal")) + scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present")) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+gluclose
+
+cholest<-ggplot(cardio_clean, aes(x=cholesterol, fill=cardio)) +
+  geom_bar(stat="count", position = 'dodge') + theme_minimal() +  ggtitle("Cholesterol Levels of Patients") + ylab("Number of Patients") + xlab("Cholesterol Levels") + theme(plot.title = element_text(hjust = 0.5)) +  scale_x_discrete(labels=c("1" = "Normal", "2" = "Above Normal", "3" = "Well Above Normal"))  +scale_fill_discrete(name="Presence or Absence of Cardiovascular Disease",
+                         breaks=c("0", "1"),
+                         labels=c("Cardiovascular Disease Absent", "Cardiovascular Disease Present")) +  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+cholest
+
+
+```
+
+Surprisingly, we see that majority of the patients with cardiovascular diseases have reported that they are non-smokers, non-drinkers and are physically active. Information about smoking, drinking, and being active was collected directly from patients and may be biased. We also see that patients with well above normal levels of gluclose and cholesterol have a greater chance of having cardiovascular diseases. 
